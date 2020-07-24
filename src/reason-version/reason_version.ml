@@ -22,6 +22,7 @@ type package_version = {
 
 type feature =
   | AngleBracketTypes
+  | HashVariantsColonMethodCallBacktickClassTypes
 
 (**
  * Tracks the current package version of Reason parser/printer. This is
@@ -80,7 +81,7 @@ let at_least (major, minor) =
 
 let supports = function
   | AngleBracketTypes -> at_least (3, 8)
-
+  | HashVariantsColonMethodCallBacktickClassTypes -> at_least (3, 9)
 
 let dummy_loc () = {
   loc_start = Lexing.dummy_pos;

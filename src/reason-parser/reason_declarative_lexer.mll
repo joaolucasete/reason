@@ -381,14 +381,35 @@ rule token state = parse
       try Hashtbl.find keyword_table s
       with Not_found -> LIDENT s
     }
-  | "`" (lowercase | uppercase) identchar *
-    { let s = Lexing.lexeme lexbuf in
-      let word = String.sub s 1 (String.length s - 1) in
-      match Hashtbl.find keyword_table word with
-      | exception Not_found -> NAMETAG word
-      | _ ->
-        raise_error (Location.curr lexbuf) (Keyword_as_tag word);
-        LIDENT "thisIsABugReportThis"
+  | "#" (((lowercase | uppercase) identchar *) as tag)
+    {
+      if Reason_version.supports Reason_version.HashVariantsColonMethodCallBacktickClassTypes then (
+        let s = Lexing.lexeme lexbuf in
+        let word = String.sub s 1 (String.length s - 1) in
+        match Hashtbl.find keyword_table word with
+        | exception Not_found -> NAMETAG word
+        | _ ->
+          raise_error (Location.curr lexbuf) (Keyword_as_tag word);
+          LIDENT "thisIsABugReportThis"
+      ) else (
+        set_lexeme_length lexbuf (String.length tag - 1);
+        SHARP
+      )
+    }
+  | "`" ((lowercase | uppercase) identchar *)
+    {
+      if Reason_version.supports Reason_version.HashVariantsColonMethodCallBacktickClassTypes then (
+        set_lexeme_length lexbuf 1;
+        SHARP
+      ) else (
+        let s = Lexing.lexeme lexbuf in
+        let word = String.sub s 1 (String.length s - 1) in
+        match Hashtbl.find keyword_table word with
+        | exception Not_found -> NAMETAG word
+        | _ ->
+          raise_error (Location.curr lexbuf) (Keyword_as_tag word);
+          LIDENT "thisIsABugReportThis"
+      )
     }
   | lowercase_latin1 identchar_latin1 *
     { Ocaml_util.warn_latin1 lexbuf; LIDENT (Lexing.lexeme lexbuf) }
@@ -497,12 +518,24 @@ rule token state = parse
     set_lexeme_length lexbuf 2;
     EQUALGREATER
   }
-  | "#"  { SHARP }
+  | "#"  {
+    if Reason_version.supports Reason_version.HashVariantsColonMethodCallBacktickClassTypes then (
+      COLONCOLON
+    ) else (
+      SHARP
+    )
+  }
   | "."  { DOT }
   | ".." { DOTDOT }
   | "..."{ DOTDOTDOT }
   | ":"  { COLON }
-  | "::" { COLONCOLON }
+  | "::" {
+    if Reason_version.supports Reason_version.HashVariantsColonMethodCallBacktickClassTypes then (
+      SHARP
+    ) else (
+      COLONCOLON
+    )
+  }
   | ":=" { COLONEQUAL }
   | ":>" { COLONGREATER }
   | ";"  { SEMI }
